@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Esports Hub - Train. Compete. Earn.</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Framer Motion -->
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              display: ['Rajdhani', 'sans-serif'],
+            },
+            colors: {
+              brand: {
+                dark: '#0a0a0f',
+                purple: '#6d28d9',
+                neon: '#a855f7',
+                accent: '#06b6d4',
+                success: '#10b981'
+              }
+            },
+            backgroundImage: {
+              'hero-pattern': "radial-gradient(circle at center, #1e1b4b 0%, #020617 100%)",
+              'grid-pattern': "linear-gradient(to right, #1e293b 1px, transparent 1px), linear-gradient(to bottom, #1e293b 1px, transparent 1px)"
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        background-color: #020617;
+        color: #f8fafc;
+      }
+      ::-webkit-scrollbar { width: 8px; }
+      ::-webkit-scrollbar-track { background: #020617; }
+      ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+      ::-webkit-scrollbar-thumb:hover { background: #475569; }
+      
+      #loading-screen {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #020617;
+        color: white;
+        z-index: 9999;
+        font-family: sans-serif;
+        gap: 1rem;
+      }
+    </style>
+</head>
+<body>
+    <div id="loading-screen">
+        <div style="font-size: 1.5rem; font-weight: bold;">Loading Esports Hub...</div>
+    </div>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const React = window.React;
+        const ReactDOM = window.ReactDOM;
+        const { useState, useEffect } = React;
+        const { motion, AnimatePresence } = window.Motion;
+
+        // --- INLINE ICONS (No external dependency = No errors) ---
+        const IconBase = ({ children, className, ...props }) => (
+            <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="24" height="24" viewBox="0 0 24 24" 
+                fill="none" stroke="currentColor" strokeWidth="2" 
+                strokeLinecap="round" strokeLinejoin="round" 
+                className={className} 
+                {...props}
+            >
+                {children}
+            </svg>
+        );
+
+        const Zap = (props) => <IconBase {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></IconBase>;
+        const TrendingUp = (props) => <IconBase {...props}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></IconBase>;
+        const Dumbbell = (props) => <IconBase {...props}><path d="M14.4 14.4l-9.9 9.9" /><path d="M6.5 17.5l-3 3" /><path d="M9.5 20.5l-3 3" /><path d="M10 10l9.9-9.9" /><path d="M17.5 6.5l3-3" /><path d="M20.5 9.5l3-3" /><path d="m2 2 20 20" /></IconBase>;
+        const Globe = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10" /><line x1="2" x2="22" y1="12" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></IconBase>;
+        const Users = (props) => <IconBase {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></IconBase>;
+        const Coins = (props) => <IconBase {...props}><circle cx="8" cy="8" r="6" /><path d="M18.09 10.37A6 6 0 1 1 10.34 18" /><path d="M7 6h1v4" /><path d="m16.71 13.88.7.71-2.82 2.82" /></IconBase>;
+        const CalendarDays = (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /><path d="M8 14h.01" /><path d="M12 14h.01" /><path d="M16 14h.01" /><path d="M8 18h.01" /><path d="M12 18h.01" /><path d="M16 18h.01" /></IconBase>;
+        const ArrowUpRight = (props) => <IconBase {...props}><path d="M7 7h10v10" /><path d="M7 17 17 7" /></IconBase>;
+        const Crown = (props) => <IconBase {...props}><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14" /></IconBase>;
+        const Gift = (props) => <IconBase {...props}><rect x="3" y="8" width="18" height="4" rx="1" /><path d="M12 8v13" /><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7" /><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5" /></IconBase>;
+        const Shield = (props) => <IconBase {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" /></IconBase>;
+        const Bot = (props) => <IconBase {...props}><path d="M12 8V4H8" /><rect width="16" height="12" x="4" y="8" rx="2" /><path d="M2 14h2" /><path d="M20 14h2" /><path d="M15 13v2" /><path d="M9 13v2" /></IconBase>;
+        const Sparkles = (props) => <IconBase {...props}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /><path d="M5 3v4" /><path d="M9 5H5" /><path d="M19 17v4" /><path d="M15 19h4" /></IconBase>;
+        const Send = (props) => <IconBase {...props}><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></IconBase>;
+        const Twitter = (props) => <IconBase {...props}><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-12.7 12.5S.2 5.3 8 2c-4 1.7-6.7 4.3-6.7 4.3 0 0 3-1.5 5.5-2.6 1.3-4.1 8-5.3 11.2-1.7.6-1.9 2-3.2 2-3.2" /></IconBase>;
+        const Instagram = (props) => <IconBase {...props}><rect width="20" height="20" x="2" y="2" rx="5" ry="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" x2="17.51" y1="6.5" y2="6.5" /></IconBase>;
+        const Twitch = (props) => <IconBase {...props}><path d="M21 2H3v16h5v4l4-4h5l4-4V2zm-10 9V7m5 4V7" /></IconBase>;
+        const Mail = (props) => <IconBase {...props}><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></IconBase>;
+        const MousePointer2 = (props) => <IconBase {...props}><path d="m4 4 7.07 17 2.51-7.39L21 11.07z" /></IconBase>;
+        const Swords = (props) => <IconBase {...props}><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5" /><line x1="13" x2="19" y1="19" y2="13" /><line x1="16" x2="20" y1="16" y2="20" /><line x1="19" x2="21" y1="21" y2="19" /><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5" /><line x1="5" x2="9" y1="14" y2="10" /><line x1="9" x2="11" y1="11" y2="13" /><line x1="12" x2="14" y1="12" y2="10" /></IconBase>;
+        const ShieldCheck = (props) => <IconBase {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" /><path d="m9 12 2 2 4-4" /></IconBase>;
+        const Scale = (props) => <IconBase {...props}><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></IconBase>;
+        const ArrowRightLeft = (props) => <IconBase {...props}><path d="m16 3 4 4-4 4" /><path d="M20 7H4" /><path d="m8 21-4-4 4-4" /><path d="M4 17h16" /></IconBase>;
+        const Wallet = (props) => <IconBase {...props}><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" /><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" /></IconBase>;
+        const Gavel = (props) => <IconBase {...props}><path d="m14 13-7.5 7.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L11 10" /><path d="m16 16 6-6" /><path d="m8 8 6-6" /><path d="m9 7 8 8" /><path d="m21 11-8-8" /></IconBase>;
+        const Brain = (props) => <IconBase {...props}><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" /><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" /></IconBase>;
+
+        // --- COMPONENTS ---
+
+        const Navbar = () => {
+          const [isScrolled, setIsScrolled] = useState(false);
+
+          useEffect(() => {
+            const handleScroll = () => {
+              setIsScrolled(window.scrollY > 20);
+            };
+            window.addEventListener('scroll', handleScroll);
+            return () => window.removeEventListener('scroll', handleScroll);
+          }, []);
+
+          return (
+            <nav className={`fixed w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-[#020617]/90 backdrop-blur-md border-b border-white/10' : 'bg-transparent'}`}>
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex items-center justify-between h-20">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-brand-purple p-2 rounded-lg">
+                      <Zap className="h-6 w-6 text-white" />
+                    </div>
+                    <span className="font-display font-bold text-2xl tracking-wider text-white">
+                      ESPORTS <span className="text-brand-neon">HUB</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </nav>
+          );
+        };
+
+        const Hero = () => {
+          return (
+            <div className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+              <div className="absolute inset-0 bg-hero-pattern opacity-80"></div>
+              
+              <motion.div 
+                animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+                transition={{ duration: 8, repeat: Infinity }}
+                className="absolute top-1/4 left-1/4 w-96 h-96 bg-brand-purple rounded-full blur-[128px] opacity-30"
+              />
+              <motion.div 
+                animate={{ scale: [1, 1.1, 1], opacity: [0.2, 0.4, 0.2] }}
+                transition={{ duration: 10, repeat: Infinity, delay: 1 }}
+                className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-brand-accent rounded-full blur-[128px] opacity-20"
+              />
+
+              <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10 flex flex-col items-center text-center">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6 }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm mb-8"
+                >
+                  <span className="text-brand-neon font-bold text-sm tracking-wider uppercase">The First Digital Esports Gym</span>
+                </motion.div>
+
+                <motion.h1 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  className="text-5xl md:text-7xl lg:text-8xl font-display font-bold tracking-tight text-white mb-6"
+                >
+                  TRAIN LIKE A PRO. <br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-neon to-brand-accent">
+                    EARN LIKE A CHAMP.
+                  </span>
+                </motion.h1>
+
+                <motion.p 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.4 }}
+                  className="text-xl md:text-2xl text-gray-400 max-w-3xl mb-10 leading-relaxed"
+                >
+                  Don't just play—train. Esports Hub is the platform where you improve your skills with specific scenarios and monetize your talent immediately. 
+                  <span className="block mt-2 text-white font-bold">1 Token = €1. Real Stakes. Peer-to-Peer.</span>
+                </motion.p>
+
+                <motion.div 
+                  initial={{ opacity: 0, y: 40 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.8 }}
+                  className="mt-20 flex flex-wrap justify-center gap-12 w-full max-w-4xl border-t border-white/10 pt-8"
+                >
+                  <div className="flex flex-col items-center">
+                    <TrendingUp className="w-6 h-6 text-brand-success mb-2" />
+                    <span className="text-xl font-bold text-white">EARNINGS</span>
+                    <span className="text-xs text-gray-500 uppercase tracking-widest">Skill-Based Wagering</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <Dumbbell className="w-6 h-6 text-brand-accent mb-2" />
+                    <span className="text-xl font-bold text-white">TRAINING</span>
+                    <span className="text-xs text-gray-500 uppercase tracking-widest">Specific Scenarios</span>
+                  </div>
+                </motion.div>
+              </div>
+            </div>
+          );
+        };
+
+        const Philosophy = () => {
+          return (
+            <section className="py-24 bg-[#0a0a0f] relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-1/3 h-full bg-brand-purple/5 blur-[100px]"></div>
+              
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                  
+                  <motion.div
+                    initial={{ opacity: 0, x: -50 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    <div className="inline-block px-3 py-1 mb-6 border border-brand-accent/30 rounded-full bg-brand-accent/10">
+                      <span className="text-brand-accent text-sm font-bold tracking-widest uppercase">The Vision</span>
+                    </div>
+                    <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-8 leading-tight">
+                      An <span className="text-brand-purple">Esports Gym</span> for the Next Generation
+                    </h2>
+                    
+                    <div className="space-y-6 text-gray-400 text-lg leading-relaxed">
+                      <p>
+                        <strong className="text-white">The Problem:</strong> To reach the top level, you need deep knowledge and resources. Often, pros gatekeep their training methods to avoid competition, creating a massive barrier to entry.
+                      </p>
+                      <p>
+                        <strong className="text-white">Our Solution:</strong> Esports Hub acts as a digital gym. Just as a gym has specific machines for specific muscles, we provide specific scenarios to train aim, game sense, and positioning.
+                      </p>
+                      <p>
+                        We turn your weaknesses into strengths through a gamified, structured environment where you don't just play—you train, you improve, and you <span className="text-brand-success font-bold">earn</span>.
+                      </p>
+                    </div>
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6 }}
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-6"
+                  >
+                    <div className="bg-[#131b2e] p-6 rounded-2xl border border-white/5 hover:border-brand-purple/50 transition-colors">
+                      <Dumbbell className="w-10 h-10 text-brand-purple mb-4" />
+                      <h3 className="text-xl font-bold text-white mb-2">Train Weaknesses</h3>
+                      <p className="text-gray-400 text-sm">Target specific in-game situations. Turn liabilities into assets.</p>
+                    </div>
+                    <div className="bg-[#131b2e] p-6 rounded-2xl border border-white/5 hover:border-brand-accent/50 transition-colors mt-0 sm:mt-8">
+                      <Brain className="w-10 h-10 text-brand-accent mb-4" />
+                      <h3 className="text-xl font-bold text-white mb-2">Pro Mindset</h3>
+                      <p className="text-gray-400 text-sm">Understand how pros think. Challenge them directly when you rank up.</p>
+                    </div>
+                    <div className="bg-[#131b2e] p-6 rounded-2xl border border-white/5 hover:border-brand-neon/50 transition-colors">
+                      <TrendingUp className="w-10 h-10 text-brand-neon mb-4" />
+                      <h3 className="text-xl font-bold text-white mb-2">Real Growth</h3>
+                      <p className="text-gray-400 text-sm">A structured ladder that rewards skill with real value, not just badges.</p>
+                    </div>
+                  </motion.div>
+
+                </div>
+              </div>
+            </section>
+          );
+        };
+
+        const HowItWorks = () => {
+          const steps = [
+            {
+              icon: <MousePointer2 className="w-8 h-8" />,
+              title: "1. Click & Start",
+              desc: "No scheduling. No waiting. Choose your game and scenario instantly from our massive library."
+            },
+            {
+              icon: <Swords className="w-8 h-8" />,
+              title: "2. The Challenge",
+              desc: "Play ranked matches or wager tokens (1 Token = €1) against players of your skill level."
+            },
+            {
+              icon: <Coins className="w-8 h-8" />,
+              title: "3. Earn Value",
+              desc: "Winner takes all. Climb the earnings leaderboard and unlock exclusive season rewards."
+            }
+          ];
+
+          return (
+            <section className="py-24 bg-[#020617] border-y border-white/5">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center mb-16">
+                  <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-4">How It Works</h2>
+                  <p className="text-gray-400">The path from casual to paid competitor.</p>
+                </div>
+
+                <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative">
+                  <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-y-1/2 z-0"></div>
+
+                  {steps.map((step, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: index * 0.2 }}
+                      className="relative z-10 flex flex-col items-center text-center max-w-xs"
+                    >
+                      <div className="w-20 h-20 rounded-2xl bg-[#0f172a] border border-brand-neon/30 flex items-center justify-center text-white mb-6 shadow-[0_0_20px_rgba(168,85,247,0.15)]">
+                        {step.icon}
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-3">{step.title}</h3>
+                      <p className="text-gray-400 text-sm">{step.desc}</p>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          );
+        };
+
+        const TokenSystem = () => {
+          return (
+            <section className="py-24 bg-[#050b14] relative overflow-hidden">
+              <div className="absolute left-0 bottom-0 w-full h-1/2 bg-gradient-to-t from-brand-accent/5 to-transparent"></div>
+              
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div className="text-center mb-16">
+                  <div className="inline-block px-3 py-1 mb-4 border border-brand-success/30 rounded-full bg-brand-success/10">
+                    <span className="text-brand-success text-sm font-bold tracking-widest uppercase">The Economy</span>
+                  </div>
+                  <h2 className="text-3xl md:text-5xl font-display font-bold text-white mb-6">
+                    The Token System
+                  </h2>
+                  <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+                    A transparent, stable, and skill-based economy designed for serious competitors.
+                    <br />
+                    <span className="text-white font-bold">No volatility. No crypto-gambling. Just skill.</span>
+                  </p>
+                </div>
+
+                <div className="bg-[#0f172a] border border-white/10 rounded-3xl p-8 md:p-12 mb-16 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-12 opacity-5">
+                    <Coins className="w-64 h-64 text-white" />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                    <div>
+                      <h3 className="text-3xl font-bold text-white mb-6">Stable Value Standard</h3>
+                      <p className="text-gray-400 text-lg mb-8 leading-relaxed">
+                        We eliminate confusion. Our token is not a volatile cryptocurrency. It is a stable internal currency used strictly for wagering on the platform.
+                      </p>
+                      
+                      <div className="flex items-center gap-6 bg-black/30 p-6 rounded-xl border border-white/5">
+                        <div className="flex flex-col items-center">
+                          <span className="text-4xl font-bold text-white">1</span>
+                          <span className="text-sm text-gray-500 uppercase">Token</span>
+                        </div>
+                        <ArrowRightLeft className="w-8 h-8 text-brand-success" />
+                        <div className="flex flex-col items-center">
+                          <span className="text-4xl font-bold text-white">€1</span>
+                          <span className="text-sm text-gray-500 uppercase">Euro</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-6">
+                      <div className="flex items-start gap-4">
+                        <div className="bg-brand-purple/20 p-3 rounded-lg text-brand-purple">
+                          <Wallet className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-bold text-white">Deposit & Withdraw</h4>
+                          <p className="text-gray-400 text-sm">Users purchase tokens directly. Winnings can be converted back to fiat currency and withdrawn to a bank account.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-4">
+                        <div className="bg-brand-accent/20 p-3 rounded-lg text-brand-accent">
+                          <Scale className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-bold text-white">Winner Takes All</h4>
+                          <p className="text-gray-400 text-sm">In a 1v1 match, both players wager X Tokens. The winner takes the total pot (2X minus a small platform fee).</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <div className="col-span-1 md:col-span-3 text-center mb-8">
+                    <h3 className="text-2xl font-bold text-white">Why It's Skill-Gaming (Not Gambling)</h3>
+                    <p className="text-gray-400">The legal distinction relies on the "Predominance Test".</p>
+                  </div>
+
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="bg-[#020617] border border-brand-success/20 p-8 rounded-2xl relative"
+                  >
+                    <div className="absolute top-0 right-0 bg-brand-success text-black text-xs font-bold px-3 py-1 rounded-bl-lg uppercase">
+                      Legal Core
+                    </div>
+                    <div className="mb-6">
+                      <ShieldCheck className="w-10 h-10 text-brand-success" />
+                    </div>
+                    <h4 className="text-xl font-bold text-white mb-3">Skill Predominance</h4>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      In legal terms, gambling requires a "predominance of chance". Esports Hub competitions rely strictly on physical and mental skill (reaction time, aim, strategy). <strong className="text-gray-200">RNG does not dictate the winner</strong>, placing this firmly in the category of Skill Gaming.
+                    </p>
+                  </motion.div>
+
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.1 }}
+                    className="bg-[#020617] border border-white/5 p-8 rounded-2xl"
+                  >
+                    <div className="mb-6">
+                      <Gavel className="w-10 h-10 text-brand-accent" />
+                    </div>
+                    <h4 className="text-xl font-bold text-white mb-3">Peer-to-Peer (No House)</h4>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      Unlike a casino, <strong className="text-gray-200">Esports Hub never bets against the user.</strong> We act strictly as a neutral Escrow service holding funds securely until the match concludes. Users wager against other users; the platform simply charges a service fee for hosting.
+                    </p>
+                  </motion.div>
+
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.2 }}
+                    className="bg-[#020617] border border-white/5 p-8 rounded-2xl"
+                  >
+                    <div className="mb-6">
+                      <Scale className="w-10 h-10 text-brand-purple" />
+                    </div>
+                    <h4 className="text-xl font-bold text-white mb-3">Integrity & Verification</h4>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      A financial ecosystem requires absolute trust. We utilize enterprise-grade anti-cheat systems and manual dispute resolution. Winnings are only released after the match result is <strong className="text-gray-200">verified as legitimate and fair</strong>.
+                    </p>
+                  </motion.div>
+                </div>
+              </div>
+            </section>
+          );
+        };
+
+        const Features = () => {
+          const pillars = [
+            {
+              title: "Universal Library",
+              subtitle: "Just Click and Start",
+              description: "We don't just cover the top 3 games. Our goal is to expand to as many titles as possible. Don't depend on organizers—depend on yourself.",
+              icon: <Globe className="w-6 h-6" />,
+              color: "text-brand-accent",
+              bg: "bg-brand-accent/10"
+            },
+            {
+              title: "Democratized Earnings",
+              subtitle: "For Everyone, Not Just Pros",
+              description: "Stop waiting for the world finals. Use your skills to earn daily. Whether you are an elite pro or a rising talent, your skill has monetary value here.",
+              icon: <Coins className="w-6 h-6" />,
+              color: "text-brand-success",
+              bg: "bg-brand-success/10"
+            },
+            {
+              title: "Mature Ecosystem",
+              subtitle: "Professional Standards",
+              description: "We are building a healthy, mature community. Toxicity is strictly managed so you can focus on what matters: the game and the improvement.",
+              icon: <Users className="w-6 h-6" />,
+              color: "text-brand-purple",
+              bg: "bg-brand-purple/10"
+            },
+            {
+              title: "Constant Action",
+              subtitle: "Daily, Weekly, Monthly",
+              description: "Organized events keep the stakes high. Daily scrims, weekly cups, and monthly majors ensure there is always a goal to chase.",
+              icon: <CalendarDays className="w-6 h-6" />,
+              color: "text-brand-neon",
+              bg: "bg-brand-neon/10"
+            }
+          ];
+
+          return (
+            <section id="features" className="py-24 bg-[#0a0a0f] relative">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="mb-12">
+                  <h2 className="text-brand-neon font-display font-bold tracking-widest uppercase mb-2">Why Us?</h2>
+                  <h3 className="text-3xl md:text-5xl font-bold text-white">The New Standard</h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {pillars.map((pillar, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: index * 0.1 }}
+                      className="group relative bg-[#020617] border border-white/5 rounded-2xl p-8 hover:border-white/10 transition-all overflow-hidden"
+                    >
+                      <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ArrowUpRight className="w-6 h-6 text-white/30" />
+                      </div>
+                      
+                      <div className={`w-12 h-12 rounded-lg ${pillar.bg} ${pillar.color} flex items-center justify-center mb-6`}>
+                        {pillar.icon}
+                      </div>
+                      
+                      <h4 className="text-xl font-bold text-white mb-1">{pillar.title}</h4>
+                      <p className={`text-xs font-bold uppercase tracking-wider mb-4 ${pillar.color}`}>{pillar.subtitle}</p>
+                      
+                      <p className="text-gray-400 leading-relaxed">
+                        {pillar.description}
+                      </p>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          );
+        };
+
+        const AiCoach = () => {
+          const [game, setGame] = useState('Valorant');
+          const [rank, setRank] = useState('Diamond 2');
+          const [weakness, setWeakness] = useState('Inconsistent aim');
+          const [response, setResponse] = useState(null);
+          const [loading, setLoading] = useState(false);
+
+          const handleConsult = async (e) => {
+            e.preventDefault();
+            if (!weakness) return;
+
+            setLoading(true);
+            setResponse(null);
+            
+            // SIMULATED RESPONSE FOR OFFLINE/DEMO PRESENTATION
+            setTimeout(() => {
+                setResponse(`Listen up. If your aim is inconsistent, it's not your hand, it's your positioning. You are taking 50/50 duels instead of guaranteeing advantage. Stop ego-peeking angles. Go into the range, practice micro-adjustments, and in game, only take fights where you have cover. Discipline beats raw aim every time.`);
+                setLoading(false);
+            }, 1500);
+          };
+
+          return (
+            <section id="ai-coach" className="py-24 bg-[#020617] relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-[#020617] to-[#020617]"></div>
+
+              <div className="max-w-4xl mx-auto px-4 relative z-10">
+                <div className="text-center mb-12">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider mb-4">
+                    <Sparkles className="w-3 h-3" />
+                    Powered by Gemini AI (Demo Mode)
+                  </div>
+                  <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-4">
+                    Meet Your Virtual <span className="text-brand-accent">Coach</span>
+                  </h2>
+                  <p className="text-gray-400">
+                    Esports Hub isn't just about playing; it's about improving. Experience a preview of our AI analyst that helps you overcome specific hurdles.
+                  </p>
+                </div>
+
+                <div className="bg-[#0f172a] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+                  <div className="bg-[#1e293b] px-6 py-4 flex items-center justify-between border-b border-white/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-brand-accent rounded-full flex items-center justify-center">
+                        <Bot className="w-5 h-5 text-black" />
+                      </div>
+                      <span className="font-bold text-white">Hub Analyst</span>
+                    </div>
+                    <span className="text-xs text-green-400 flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                      ONLINE
+                    </span>
+                  </div>
+
+                  <div className="p-6 md:p-8 space-y-6">
+                    <AnimatePresence>
+                      {response && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="bg-brand-accent/10 border-l-4 border-brand-accent p-4 rounded-r-lg"
+                        >
+                          <p className="text-gray-200 font-medium italic">"{response}"</p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <form onSubmit={handleConsult} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Game</label>
+                          <select 
+                            value={game} 
+                            onChange={(e) => setGame(e.target.value)}
+                            className="w-full bg-[#020617] border border-gray-700 rounded p-3 text-white focus:border-brand-accent focus:outline-none focus:ring-1 focus:ring-brand-accent"
+                          >
+                            <option>Valorant</option>
+                            <option>League of Legends</option>
+                            <option>CS2</option>
+                            <option>Dota 2</option>
+                            <option>Rocket League</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Current Rank</label>
+                          <input 
+                            type="text" 
+                            value={rank}
+                            onChange={(e) => setRank(e.target.value)}
+                            className="w-full bg-[#020617] border border-gray-700 rounded p-3 text-white focus:border-brand-accent focus:outline-none focus:ring-1 focus:ring-brand-accent"
+                            placeholder="e.g. Diamond 2"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">What's your biggest weakness?</label>
+                        <div className="relative">
+                          <input 
+                            type="text" 
+                            value={weakness}
+                            onChange={(e) => setWeakness(e.target.value)}
+                            className="w-full bg-[#020617] border border-gray-700 rounded p-3 text-white pr-12 focus:border-brand-accent focus:outline-none focus:ring-1 focus:ring-brand-accent"
+                            placeholder="e.g. Map awareness, Economy management, Tilt..."
+                          />
+                          <button 
+                            type="submit" 
+                            disabled={loading}
+                            className="absolute right-2 top-2 p-1.5 bg-brand-accent hover:bg-cyan-400 text-black rounded transition-colors disabled:opacity-50"
+                          >
+                            {loading ? <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div> : <Send className="w-5 h-5" />}
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </section>
+          );
+        };
+
+        const Monetization = () => {
+          return (
+            <section id="earn" className="py-24 bg-[#020617] relative">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center mb-16">
+                   <h2 className="text-brand-neon font-display font-bold tracking-widest uppercase mb-2">Business Model</h2>
+                   <h3 className="text-3xl md:text-4xl font-bold text-white">Sustainable & <span className="text-brand-accent">Rewarding</span></h3>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="bg-[#0a0a0f] border border-white/10 p-8 rounded-2xl flex flex-col"
+                  >
+                    <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-6 text-white">
+                      <Shield className="w-6 h-6" />
+                    </div>
+                    <h4 className="text-xl font-bold text-white mb-4">Platform Fees</h4>
+                    <p className="text-gray-400 mb-6 flex-grow">
+                      We take a small percentage of wagering matches and withdrawals to maintain servers and prize pools. Fair, transparent, and reinvested into the ecosystem.
+                    </p>
+                  </motion.div>
+
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.1 }}
+                    className="bg-gradient-to-b from-[#1e1b4b] to-[#0a0a0f] border border-brand-purple/50 p-8 rounded-2xl flex flex-col relative overflow-hidden"
+                  >
+                    <div className="absolute top-0 right-0 bg-brand-purple text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
+                      BEST VALUE
+                    </div>
+                    <div className="w-12 h-12 bg-brand-purple rounded-full flex items-center justify-center mb-6 text-white shadow-[0_0_15px_rgba(109,40,217,0.5)]">
+                      <Crown className="w-6 h-6" />
+                    </div>
+                    <h4 className="text-xl font-bold text-white mb-4">Pro Membership</h4>
+                    <p className="text-gray-300 mb-6 flex-grow">
+                      More than just a VIP tag. Get <strong>real competitive advantages</strong>:
+                    </p>
+                    <ul className="space-y-3 text-sm text-gray-400 mb-8">
+                      <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-brand-success rounded-full"></div> Lower withdrawal fees</li>
+                      <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-brand-success rounded-full"></div> Deep analytics & coaching access</li>
+                      <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-brand-success rounded-full"></div> Priority tournament entry</li>
+                    </ul>
+                  </motion.div>
+
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.2 }}
+                    className="bg-[#0a0a0f] border border-white/10 p-8 rounded-2xl flex flex-col"
+                  >
+                    <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-6 text-brand-neon">
+                      <Gift className="w-6 h-6" />
+                    </div>
+                    <h4 className="text-xl font-bold text-white mb-4">Seasons & Lootboxes</h4>
+                    <p className="text-gray-400 mb-6 flex-grow">
+                      Themed seasonal passes with brand collaborations. Earn lootboxes containing <strong>unique, tradeable avatars</strong> and cosmetics that show off your status.
+                    </p>
+                  </motion.div>
+                </div>
+              </div>
+            </section>
+          );
+        };
+
+        const Footer = () => {
+          return (
+            <footer className="bg-black border-t border-white/10 pt-16 pb-8">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                  <div className="col-span-1 md:col-span-1">
+                     <span className="font-display font-bold text-2xl tracking-wider text-white block mb-4">
+                      ESPORTS <span className="text-brand-neon">HUB</span>
+                    </span>
+                    <p className="text-gray-500 text-sm">
+                      The ultimate platform for esports training, wagering, and community. Level up your game today.
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-white font-bold mb-4 uppercase text-sm tracking-wider">Platform</h4>
+                    <ul className="space-y-2 text-gray-400 text-sm">
+                      <li><a href="#" className="hover:text-brand-neon transition-colors">Tournaments</a></li>
+                      <li><a href="#" className="hover:text-brand-neon transition-colors">Wagers</a></li>
+                      <li><a href="#" className="hover:text-brand-neon transition-colors">The Gym</a></li>
+                      <li><a href="#" className="hover:text-brand-neon transition-colors">Leaderboards</a></li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h4 className="text-white font-bold mb-4 uppercase text-sm tracking-wider">Support</h4>
+                    <ul className="space-y-2 text-gray-400 text-sm">
+                      <li><a href="#" className="hover:text-brand-neon transition-colors">Help Center</a></li>
+                      <li><a href="#" className="hover:text-brand-neon transition-colors">Fair Play Policy</a></li>
+                      <li><a href="#" className="hover:text-brand-neon transition-colors">Terms of Service</a></li>
+                      <li><a href="#" className="hover:text-brand-neon transition-colors">Privacy</a></li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h4 className="text-white font-bold mb-4 uppercase text-sm tracking-wider">Connect</h4>
+                    <div className="flex space-x-4">
+                      <a href="#" className="text-gray-400 hover:text-white transition-colors"><Twitter className="w-5 h-5" /></a>
+                      <a href="#" className="text-gray-400 hover:text-white transition-colors"><Instagram className="w-5 h-5" /></a>
+                      <a href="#" className="text-gray-400 hover:text-white transition-colors"><Twitch className="w-5 h-5" /></a>
+                      <a href="#" className="text-gray-400 hover:text-white transition-colors"><Mail className="w-5 h-5" /></a>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="border-t border-white/5 pt-8 text-center text-gray-600 text-xs">
+                  &copy; {new Date().getFullYear()} Esports Hub. All rights reserved. 
+                </div>
+              </div>
+            </footer>
+          );
+        };
+
+        const App = () => {
+          useEffect(() => {
+            const loader = document.getElementById('loading-screen');
+            if (loader) loader.style.display = 'none';
+          }, []);
+
+          return (
+            <div className="min-h-screen bg-[#020617] text-white selection:bg-brand-neon selection:text-white">
+              <Navbar />
+              <main>
+                <Hero />
+                <Philosophy />
+                <HowItWorks />
+                <div id="token-system">
+                  <TokenSystem />
+                </div>
+                <Features />
+                <AiCoach />
+                <Monetization />
+                
+                <section className="py-24 bg-gradient-to-t from-brand-purple/20 to-[#020617] text-center relative overflow-hidden">
+                   <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
+                  <div className="max-w-4xl mx-auto px-4 relative z-10">
+                    <h2 className="text-4xl md:text-5xl font-display font-bold mb-8">Ready to <span className="text-white">Join the Revolution?</span></h2>
+                    <p className="text-gray-300 text-lg mb-10 max-w-2xl mx-auto">
+                      We are building the future of esports training and monetization. 
+                      Be part of the community that changes the game.
+                    </p>
+                  </div>
+                </section>
+              </main>
+              <Footer />
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
